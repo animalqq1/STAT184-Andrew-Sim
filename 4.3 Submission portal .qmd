@@ -1,9 +1,13 @@
 ---
-title: "Integrated Data Analysis Report"
+title: "STAT184 HW 4.3"
+author: "Andrew Sim"
+date: "2026-04-16"
+date-modified: "2026-04-16"
 format: pdf
-editor: visual
-date : April 10, 2026
-author: Andrew Sim 
+execute:
+  echo: false
+  warning: false
+  message: false
 ---
 
 ```{r, include=FALSE}
