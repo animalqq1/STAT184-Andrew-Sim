@@ -5,3 +5,5 @@ Added project description section.
 
 
 Added usage instructions.
+
+Fix formatting and improve readability.
