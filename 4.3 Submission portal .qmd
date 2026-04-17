@@ -1,0 +1,368 @@
+---
+title: "Integrated Data Analysis Report"
+format: pdf
+editor: visual
+date : April 10, 2026
+author: Andrew Sim 
+---
+
+```{r, include=FALSE}
+# Load packages
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+if (!requireNamespace("gt", quietly = TRUE)) {
+  install.packages("gt")
+}
+
+library(ggplot2)
+library(gt)
+
+# Base tidy dataset for six airports, 2020-2025
+busiest_airports_tidy <- data.frame(
+  year = c(
+    2020, 2021, 2022, 2023, 2024, 2025,
+    2020, 2021, 2022, 2023, 2024, 2025,
+    2020, 2021, 2022, 2023, 2024, 2025,
+    2020, 2021, 2022, 2023, 2024, 2025,
+    2020, 2021, 2022, 2023, 2024, 2025,
+    2020, 2021, 2022, 2023, 2024, 2025
+  ),
+  iata = c(
+    rep("ATL", 6),
+    rep("DXB", 6),
+    rep("FRA", 6),
+    rep("HND", 6),
+    rep("LAX", 6),
+    rep("PKX", 6)
+  ),
+  airport = c(
+    rep("Hartsfield-Jackson Atlanta International Airport", 6),
+    rep("Dubai International Airport", 6),
+    rep("Frankfurt Airport", 6),
+    rep("Tokyo Haneda Airport", 6),
+    rep("Los Angeles International Airport", 6),
+    rep("Beijing Daxing International Airport", 6)
+  ),
+  location = c(
+    rep("Atlanta, Georgia", 6),
+    rep("Garhoud, Dubai", 6),
+    rep("Frankfurt, Hesse", 6),
+    rep("Ota, Tokyo", 6),
+    rep("Los Angeles, California", 6),
+    rep("Daxing District, Beijing", 6)
+  ),
+  country = c(
+    rep("United States", 6),
+    rep("United Arab Emirates", 6),
+    rep("Germany", 6),
+    rep("Japan", 6),
+    rep("United States", 6),
+    rep("China", 6)
+  ),
+  passengers = c(
+    42918685, 75704760, 93699630, 104653451, 108067766, 106302208,
+    25836771, 29110609, 66069981, 86994365, 92331506, 95200000,
+    18768601, 24812849, 48918482, 59355389, 61564957, 63189666,
+    31055210, 25876429, 50290705, 78719302, 85900167, 91430000,
+    28779527, 48007284, 65924298, 75050875, 76588028, 73709594,
+    16091449, 25051012, 10277623, 39410776, 49441029, 53618949
+  ),
+  stringsAsFactors = FALSE
+)
+
+busiest_airports_tidy <- busiest_airports_tidy[order(busiest_airports_tidy$iata, busiest_airports_tidy$year), ]
+rownames(busiest_airports_tidy) <- NULL
+```
+
+# 1. Busiest Airports Analysis
+
+## Introduction
+
+This section analyzes the six busiest airports using data from HW #3.4. The goal is to identify patterns in airport traffic and understand which airports handle the highest volume.
+
+## Results
+```{r, echo=FALSE}
+airports_table <- busiest_airports_tidy |>
+  transform(passengers_millions = round(passengers / 1000000, 1)) |>
+  subset(select = c(iata, airport, year, passengers_millions)) |>
+  gt() |>
+  tab_header(
+    title = "Passenger Traffic for Six Major Airports (2020-2025)",
+    subtitle = "Values shown in millions of passengers"
+  ) |>
+  cols_label(
+    iata = "IATA",
+    airport = "Airport",
+    year = "Year",
+    passengers_millions = "Passengers (Millions)"
+  ) |>
+  fmt_number(columns = .data$passengers_millions, decimals = 1) |>
+  tab_options(
+    table.font.size = 12,
+    heading.title.font.size = 14,
+    heading.subtitle.font.size = 12
+  )
+
+airports_table
+```
+## Visualization
+```{r, echo=FALSE}
+ggplot(
+  data = busiest_airports_tidy,
+  aes(x = year, y = passengers, color = iata, group = iata)
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = function(x) round(x / 1e6, 0)) +
+  labs(
+    title = "Passenger Traffic Trends for Major Airports (2020–2025)",
+    subtitle = "Comparison of six international airports",
+    x = "Year",
+    y = "Passengers (Millions)",
+    color = "Airport (IATA)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "right"
+  )
+```
+## Analysis
+The table and line graph summarize passenger traffic trends for six major international airports from 2020 through 2025. Across all six airports, passenger traffic was relatively low in 2020 due to the global effects of the COVID-19 pandemic, but each airport showed recovery over the following years.
+
+Atlanta (ATL) remained the busiest airport throughout most of the period and surpassed 100 million passengers by 2023. Dubai (DXB), Tokyo Haneda (HND), and Los Angeles (LAX) also showed strong upward trends, reflecting the continued recovery of both domestic and international air travel. Frankfurt (FRA) recovered more gradually, while Beijing Daxing (PKX) showed the sharpest fluctuation, including a notable decline in 2022 before rebounding in later years.
+
+Overall, the visualization highlights how major airports experienced different recovery patterns, but the general trend across all six locations was substantial growth after 2020.
+
+
+# 2. Monte Carlo Numerical Integration
+
+## Overview
+
+This section uses Monte Carlo simulation to approximate the area under the standard normal density curve. The method works by generating random points inside a rectangle that surrounds the function and then estimating the integral based on the proportion of points that fall on or below the curve.
+
+## Visualization
+
+```{r, echo=FALSE}
+if (!requireNamespace("patchwork", quietly = TRUE)) {
+  install.packages("patchwork")
+}
+
+library(patchwork)
+
+# Function to integrate (Normal PDF)
+f <- function(x) {
+  dnorm(x, mean = 0, sd = 1)
+}
+
+# Monte Carlo simulation function
+monte_carlo_sim <- function(n, x_min, x_max, y_min, y_max, f) {
+  x <- runif(n, x_min, x_max)
+  y <- runif(n, y_min, y_max)
+  fx <- f(x)
+  flag <- ifelse(y <= fx, "on/below", "above")
+
+  data.frame(
+    x = x,
+    y = y,
+    fx = fx,
+    flag = flag
+  )
+}
+
+# Function to create a plot for a given n
+make_plot <- function(n) {
+  mc_data <- monte_carlo_sim(
+    n = n,
+    x_min = -4,
+    x_max = 4,
+    y_min = 0,
+    y_max = 0.4,
+    f = f
+  )
+
+  rect_area <- (4 - (-4)) * (0.4 - 0)
+  p <- mean(mc_data$flag == "on/below")
+  est <- rect_area * p
+
+  curve_data <- data.frame(
+    x = seq(-4, 4, length.out = 500)
+  )
+  curve_data$y <- f(curve_data$x)
+
+  ggplot(mc_data, aes(x, y, color = flag)) +
+    geom_point(alpha = 0.6, size = 1) +
+    geom_line(
+      data = curve_data,
+      aes(x, y),
+      color = "blue",
+      linewidth = 1.2,
+      inherit.aes = FALSE
+    ) +
+    scale_color_manual(values = c("above" = "red", "on/below" = "green")) +
+    labs(
+      title = paste("Monte Carlo Integration (n =", n, ")"),
+      subtitle = paste("Estimated Integral =", round(est, 4)),
+      x = "x",
+      y = "y",
+      color = "Point Type"
+    ) +
+    coord_cartesian(xlim = c(-4, 4), ylim = c(0, 0.4)) +
+    theme_minimal()
+}
+
+plot10 <- make_plot(10)
+plot100 <- make_plot(100)
+plot1000 <- make_plot(1000)
+plot10000 <- make_plot(10000)
+
+plot10 + plot100 + plot1000 + plot10000
+```
+
+## Analysis
+
+The multi-panel visualization shows how Monte Carlo integration becomes more stable as the sample size increases. When only 10 random points are used, the estimate is highly variable because the sample is too small to represent the shape of the curve well. As the number of points increases to 100 and 1000, the distribution of sampled points begins to better reflect the area under the function.
+
+With 10,000 points, the estimate becomes much more consistent because the proportion of points falling on or below the curve more closely matches the true area under the standard normal density over the selected interval. This demonstrates a key idea of Monte Carlo methods: larger random samples generally produce more accurate and less variable approximations.
+
+Overall, the visualization shows that Monte Carlo integration is a useful numerical method for approximating integrals when an exact solution may be difficult to compute directly. In this case, increasing the number of simulated points improves the quality of the estimate and makes the approximation more reliable.
+
+# 3. Planning and Prompting GenAI Tools
+
+## Data Review and Plan
+
+The dataset contains calcium measurements across multiple variables labeled y0, y1, y2, and y3, which appear to represent repeated measurements under different conditions or time points. The data is currently in a wide format, with multiple columns representing these measurements.
+
+To prepare the dataset for analysis, I developed the following plan:
+1. Inspect the dataset structure and confirm that all variables are numeric.
+2. Reshape the data from wide format into long (tidy) format so that the measurement type (y0–y3) becomes a categorical variable.
+3. Check for any missing or inconsistent values and handle them if necessary.
+4. Create a visualization to compare calcium measurements across the different categories (y0, y1, y2, y3).
+5. Use a boxplot or line plot to effectively show differences and trends across these measurement groups.
+
+This plan ensures that the dataset is structured properly for visualization and comparison.
+
+---
+
+## Plan-Based Prompt
+
+I used ChatGPT and provided the following prompt:
+
+"Given this calcium dataset with columns y0, y1, y2, and y3, please reshape the data into a tidy format, clean it if necessary, and create an appropriate visualization in R to compare the calcium measurements across these variables. Provide the R code."
+
+---
+
+## Plan-Based Prompt Result
+
+The response generated by ChatGPT included steps for reshaping the dataset into long format using functions such as pivot_longer, along with code to create a visualization comparing the variables y0 through y3.
+
+The resulting visualization (such as a boxplot) made it easier to compare the distribution of calcium values across the different measurement groups. The output was useful because it followed the plan closely and provided both explanation and working R code.
+
+---
+
+## Generic Prompt Result
+
+For comparison, I considered a generic prompt such as:
+
+"Analyze this dataset and create a plot."
+
+
+---
+
+## Comparison of Results
+
+Comparing the two approaches, the plan-based prompt produced a more accurate and relevant result. Because it included specific instructions about reshaping and comparing variables, the output was more aligned with the dataset structure.
+
+In contrast, the generic prompt lacked detail and produced a less tailored response. This demonstrates that more detailed and structured prompts significantly improve the quality of genAI-generated outputs.
+
+Overall, this exercise showed that planning before prompting leads to more effective use of genAI tools in data analysis.
+
+# 4. Reflection
+
+Throughout this course, I have developed a stronger understanding of how data analysis involves both technical skills and communication skills. One important thing I learned is that producing a good result is not only about writing code, but also about organizing the analysis clearly and explaining what the results mean.
+
+For example, in the busiest airports section, I learned how to present both a table and a visualization together so that the reader can understand patterns more clearly. In the Monte Carlo section, I better understood how simulation can be used to approximate a mathematical quantity and how increasing the sample size improves stability and accuracy.
+
+I also learned that document structure matters. Using Quarto helped me combine narrative writing, tables, figures, and code into a single organized report. Another important lesson was that genAI tools work better when prompts are specific and well planned. Comparing a plan-based prompt with a generic prompt showed me that careful instructions can significantly improve the quality of the output.
+
+Overall, this course helped me improve in data wrangling, visualization, simulation, and communication. I now feel more confident not only in carrying out an analysis, but also in presenting it in a polished and understandable way.
+
+# Appendix A: GenAI Usage
+
+## Tool Information
+- Tool used: ChatGPT
+- Version: GPT-5.4 Thinking (ChatGPT)
+- Date of usage: April 10, 2026
+
+---
+
+## Exact Prompt
+
+"Given a dataset with columns y0, y1, y2, and y3, reshape the data into a tidy format and explain the process. Also provide code in both Python and R."
+
+---
+
+## Exact Response
+
+To reshape your calcium dataset (with columns y0, y1, y2, y3) into a tidy format, here’s a clear and structured explanation.
+
+1. Why reshaping is needed
+
+Right now your data is in wide format:
+
+Each row = one participant  
+Each column (y0, y1, y2, y3) = different time points  
+
+This is not tidy because:  
+Time is spread across multiple columns instead of being one variable  
+
+2. What tidy format should look like  
+
+We want:
+
+participant_id | time | calcium  
+1 | y0 | 87.3  
+1 | y1 | 85.1  
+1 | y2 | 83.4  
+1 | y3 | 80.2  
+
+Now:  
+Each row = one observation (one person at one time)  
+Each column = one variable  
+
+3. How to reshape (conceptually)
+
+You need to:  
+- Keep a participant identifier  
+- Convert (y0, y1, y2, y3) → one column (time)  
+- Move their values → one column (calcium)  
+
+This process is called “melting” (or pivoting longer)
+
+4. Python (pandas) solution
+
+```python
+import pandas as pd
+
+df = pd.read_csv("calcium.csv")
+
+df["participant_id"] = range(1, len(df) + 1)
+
+tidy_df = df.melt(
+    id_vars="participant_id",
+    value_vars=["y0", "y1", "y2", "y3"],
+    var_name="time",
+    value_name="calcium"
+)
+
+tidy_df["time"] = tidy_df["time"].map({
+    "y0": "Initial",
+    "y1": "Year 1",
+    "y2": "Year 2",
+    "y3": "Year 3"
+})
+
+tidy_df = tidy_df.dropna(subset=["calcium"])
+
