@@ -1,3 +1,7 @@
 Updated this file in the dev branch.
 
-Resolved issues #1 and #2
+Added project description section.
+
+Added usage instructions.
+
+Fix formatting and improve readability.
